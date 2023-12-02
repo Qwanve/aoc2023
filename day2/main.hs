@@ -35,21 +35,32 @@ parseColor =
 
 
 possibleRound :: Round -> Bool
-possibleRound n = let red = fromMaybe 0 (lookup "red" n)
-                      green = fromMaybe 0 (lookup "green" n)
-                      blue = fromMaybe 0 (lookup "blue" n)
-                  in
-                    red <= 12 && green <= 13 && blue <= 14
+possibleRound n =
+    let red = fromMaybe 0 (lookup "red" n)
+        green = fromMaybe 0 (lookup "green" n)
+        blue = fromMaybe 0 (lookup "blue" n)
+    in
+        red <= 12 && green <= 13 && blue <= 14
 
 possibleGame :: [Round] -> Bool
 possibleGame = all possibleRound
+
+gamePower :: Game -> Int
+gamePower (_, rounds) = 
+    let red = maximum $ map (fromMaybe 0 . lookup "red") rounds
+        green = maximum $ map (fromMaybe 0 . lookup "green") rounds
+        blue = maximum $ map(fromMaybe 0 . lookup "blue") rounds
+    in
+        red * green * blue
 
 
 main = do input <- getContents
           let games = case parse parseInput "stdin" input of
                           Left err -> error $ "Error:\n" ++ show err
                           Right result -> result
-          let g = sum $ map fst $ filter snd $  map (second possibleGame) games
+          let gamesum = sum $ map fst $ filter snd $  map (second possibleGame) games
 
-          putStr "Sum: "; print g
+          putStr "Possible sum: "; print gamesum
+          let powersum = sum $ map gamePower games
+          putStr "Power sum: "; print powersum
 
