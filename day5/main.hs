@@ -1,6 +1,6 @@
 import Text.ParserCombinators.Parsec
 import Data.List (find)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 
 data Mapping = Mapping {
   source :: Int,
@@ -11,7 +11,7 @@ data Mapping = Mapping {
 type Map = [Mapping]
 
 data Almanac = Almanac {
-  seeds :: [Int],
+  seeds :: [(Int, Int)],
   seed_to_soil :: Map,
   soil_to_fertilizer :: Map,
   fertilizer_to_water :: Map,
@@ -26,15 +26,20 @@ parseNumber = do
   optional spaces
   read <$> many1 digit
 
+parsePair :: Parser (Int, Int)
+parsePair = do
+  [a, b] <- count 2 parseNumber
+  return (a, b)
+
 parseMapping :: Parser Mapping
 parseMapping = do
   [d, s, r] <- count 3 parseNumber
   return Mapping {source = s, dest = d, len = r}
 
-parseInitialSeeds :: Parser [Int]
+parseInitialSeeds :: Parser [(Int, Int)]
 parseInitialSeeds = do
   string "seeds: "
-  manyTill parseNumber newline
+  manyTill parsePair newline
 
 parseMap :: Parser Map
 parseMap = manyTill parseMapping (try (string "\n\n"))
@@ -73,14 +78,23 @@ translateMapping :: Mapping -> Int -> Int
 translateMapping m i = dest m + (i - source m)
 
 applyMap :: Map -> Int -> Int
-applyMap m i = translateMapping (fromMaybe Mapping {source = 0, dest = 0, len = 0} $ find (\mapping -> (i >= source mapping) && i <= (source mapping + len mapping)) m) i
+applyMap m i = translateMapping (fromMaybe Mapping {source = 0, dest = 0, len = 0} $ find (\mapping -> isJust $ rangeInterlap (i, i) (source mapping, source mapping + len mapping)) m) i
+
+rangeInterlap :: (Int, Int) -> (Int, Int) -> Maybe (Int, Int)
+rangeInterlap (start1, end1) (start2, end2)
+  | start1 > end2 || start2 > end1 = Nothing
+  | otherwise = Just (max start1 start2, min end1 end2)
+
+expandSeeds :: [(Int, Int)] -> [Int]
+expandSeeds = concatMap (\(a, b) -> take b [a..])
 
 main = do
   input <- getContents
   let almanac = case parse parseAlmanac "stdin" input of
                     Left err -> error $ "Error:\n" ++ show err
                     Right result -> result
-  let soils = map (applyMap $ seed_to_soil almanac) (seeds almanac)
+  let seed = expandSeeds $ seeds almanac
+  let soils = map (applyMap $ seed_to_soil almanac) seed
   let ferts = map (applyMap $ soil_to_fertilizer almanac) soils
   let water = map (applyMap $ fertilizer_to_water almanac) ferts
   let light = map (applyMap $ water_to_light almanac) water
@@ -88,7 +102,10 @@ main = do
   let humid = map (applyMap $ temperature_to_humidity almanac) temp
   let locs = map (applyMap $ humidity_to_location almanac) humid
   -- print almanac
-  -- putStr "Seeds: "; print $ seeds almanac
+
+  -- print $ seed_to_soil almanac
+  -- print $ soil_to_fertilizer almanac
+  -- putStr "Seeds: "; print seed
   -- putStr "Soils: "; print soils
   -- putStr "Fertilizers: "; print ferts
   -- putStr "Waters: "; print water
