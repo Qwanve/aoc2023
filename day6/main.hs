@@ -49,7 +49,7 @@ winningGames2 :: (Int, Int) -> Int
 winningGames2 (time, distance) =
   let a = fromIntegral time / 2
       b = sqrt (fromIntegral time ^2 - 4*fromIntegral distance) / 2
-  in ceilingDoubleInt (a + b - 1) - floorDoubleInt (a - b + 1) + 1
+  in ceilingDoubleInt (a + b) - floorDoubleInt (a - b) - 1
 
 
 main = do
