@@ -34,6 +34,10 @@ extrapolate [] = []
 extrapolate xs | length (nub xs) == 1 = xs ++ [head xs]
                | otherwise = xs ++ [last xs + last (extrapolate $ diffs xs)]
 
+extrapolateBack :: [Int] -> [Int]
+extrapolateBack [] = []
+extrapolateBack xs | length (nub xs) == 1 = xs ++ [head xs]
+               | otherwise = head xs - head (extrapolateBack $ diffs xs) : xs
 main :: IO ()
 main = do
   input <- getContents
@@ -44,7 +48,9 @@ main = do
   -- let diffs = map (diffdepth 0) numberlines
   -- let extras = map (\l -> uncurry extrapolate (diffdepth 0 l) l) numberlines 
   let extras = sum $ map (last . extrapolate) numberlines
+  let backs = sum $ map (head . extrapolateBack) numberlines
 
-  print numberlines
+  -- print numberlines
   -- print diffs
-  putStr "Sum: "; print extras
+  putStr "Extrapolate forward sum: "; print extras
+  putStr "Extrapolate backward sum: "; print backs
