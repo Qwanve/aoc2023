@@ -1,5 +1,7 @@
 import Text.ParserCombinators.Parsec
 import Data.Maybe (fromJust)
+import Data.List
+-- import Data.List.Ordered (isect)
 
 data Direction = GoLeft | GoRight deriving (Show)
 
@@ -19,18 +21,18 @@ parseDirections = map letterToDirection <$> manyTill (choice [char 'L', char 'R'
 parseNode :: Parser Node
 parseNode = do
   v <- count 3 anyChar
-  string " = "
+  _ <- string " = "
   e <- parseEdgeList
-  newline
+  _ <- newline
   return (v, e)
 
 parseEdgeList :: Parser EdgeList
 parseEdgeList = do
-  char '('
+  _ <- char '('
   a <- count 3 anyChar
-  string ", "
+  _ <- string ", "
   b <- count 3 anyChar
-  char ')'
+  _ <- char ')'
   return (a, b)
 
 parseGraph :: Parser Graph
@@ -39,7 +41,7 @@ parseGraph = manyTill parseNode eof
 parseInput :: Parser ([Direction], Graph)
 parseInput = do
   dirs <- parseDirections
-  newline
+  _ <- newline
   g <- parseGraph
   return (dirs, g)
 
@@ -50,14 +52,23 @@ applyDirection GoRight = snd
 getNextNode :: Graph -> String -> Direction -> String
 getNextNode g n d = d `applyDirection` fromJust (lookup n g)
 
+test :: [String] -> Bool
+test = all (\a -> last a == 'Z')
 
+ends :: Graph -> [Direction] -> String -> [Int]
+ends graph directions node = findIndices (test . singleton) $ scanl (getNextNode graph) node $ cycle directions
+
+main :: IO ()
 main = do
   input <- getContents
   let (directions, graph) = case parse parseInput "stdin" input of 
                       Left err -> error $ "Error:\n" ++ show err
                       Right result -> result
-  let clean_graph = filter (\(n, (a, b)) -> not (a==b && a==n)) graph ++  [("ZZZ", ("ZZZ", "ZZZ"))]
-  let x = takeWhile (/="ZZZ") $ scanl (getNextNode clean_graph) "AAA" $ cycle directions
-  -- print directions
-  -- print clean_graph
-  putStr "Steps: "; print $ length x
+  let starting_points = filter (\a -> last a == 'A') $ map fst graph
+  -- let x = takeWhile (/="ZZZ") $ scanl (getNextNode graph) "AAA" $ cycle directions
+  print starting_points
+  -- let x = foldr1 isect $ map (ends graph directions) (take 3 starting_points)
+  -- print x
+
+  let factors = map (head . ends graph directions) starting_points
+  print $ foldr1 lcm factors
